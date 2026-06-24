@@ -2,3 +2,5 @@
 lib/Seeed_GFX/.git
 secrets.yaml
 .esphome
+secrets.yaml
+.esphome
