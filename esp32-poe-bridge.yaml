@@ -77,6 +77,13 @@ esp32_ble_tracker:
     interval: 2s # scan aggressively (every ~2 s) to catch EE05 wakes
     window:  2s 
     active: true
+  on_ble_advertise:
+    # Explicit connect whenever the EE05 MAC appears — more reliable than
+    # relying on auto_connect alone, especially across deep-sleep cycles.
+    - mac_address: "${ee05_mac}"
+      then:
+        - logger.log: "EE05 advertisement seen — connecting..."
+        - ble_client.connect: ee05_display
 
 ble_client:
   - mac_address:   "${ee05_mac}"
