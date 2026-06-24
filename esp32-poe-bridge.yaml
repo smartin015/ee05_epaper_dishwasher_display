@@ -49,6 +49,11 @@ ethernet:
     number: GPIO12           # LAN8720 power; omit if board handles this
     ignore_strapping_warning: true
 
+# ── OTA updates (over Ethernet, no USB needed after first flash) ──────────────
+ota:
+  platform: esphome
+  password: !secret ota_password
+
 # ── IP address exposed to Home Assistant ──────────────────────────────────────
 text_sensor:
   - platform: ethernet_info
