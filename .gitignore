@@ -1,2 +1,4 @@
 .pio
 lib/Seeed_GFX/.git
+secrets.yaml
+.esphome
