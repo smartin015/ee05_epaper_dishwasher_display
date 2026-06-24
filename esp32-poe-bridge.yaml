@@ -12,9 +12,9 @@
 # -----------------------------------------------------------------------------
 
 substitutions:
-  device_name:  "ee05-bridge"
-  friendly:     "EE05 Bridge"
-  ee05_mac:     "AA:BB:CC:DD:EE:FF"    # ← set to your EE05's BLE MAC
+  device_name:  "poe-btproxy1"
+  friendly:     "BLE proxy and EE05 Bridge"
+  ee05_mac:     "E0:72:A1:F9:D5:E1"    # ← set to your EE05's BLE MAC
 
 esphome:
   name: "${device_name}"
