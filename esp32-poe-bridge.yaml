@@ -14,7 +14,7 @@
 substitutions:
   device_name:  "poe-btproxy1"
   friendly:     "BLE proxy and EE05 Bridge"
-  ee05_mac:     "E0:72:A1:F9:D5:E1"    # ← set to your EE05's BLE MAC
+  ee05_mac:     "E0:72:A1:F9:D5:E0"    # ← set to your EE05's BLE MAC
 
 esphome:
   name: "${device_name}"
@@ -135,7 +135,7 @@ script:
 
 # ── Recurring sync — catches EE05 when it wakes from deep sleep ─────────────
 interval:
-  - interval: 20s
+  - interval: 13s
     then:
       - script.execute: ee05_push_state
 
