@@ -47,7 +47,13 @@ text_sensor:
       name: "${friendly} IP Address"
       icon: mdi:ip-network
 
-# ── BLE tracker + client ─────────────────────────────────────────────────────
+# ── Bluetooth Proxy (for Home Assistant) + BLE tracker ───────────────────────
+#   The bridge acts as a remote Bluetooth adapter for HA.  Any BLE device in
+#   range (sensors, switches, thermometers) is forwarded to Home Assistant.
+#   This coexists with the EE05 ble_client below — same radio, shared duty cycle.
+bluetooth_proxy:
+  active: true
+
 esp32_ble_tracker:
   scan_parameters:
     interval: 3200    # scan aggressively (every ~2 s) to catch EE05 wakes
