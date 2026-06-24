@@ -80,10 +80,14 @@ esp32_ble_tracker:
   on_ble_advertise:
     # Explicit connect whenever the EE05 MAC appears — more reliable than
     # relying on auto_connect alone, especially across deep-sleep cycles.
+    # (lambda used instead of ble_client.connect action due to a template
+    #  instantiation bug with ESPBTDevice& references in ESPHome 2025.x.)
     - mac_address: "${ee05_mac}"
       then:
         - logger.log: "EE05 advertisement seen — connecting..."
-        - ble_client.connect: ee05_display
+        - lambda: |-
+            if (!id(ee05_display).connected())
+              id(ee05_display).connect();
 
 ble_client:
   - mac_address:   "${ee05_mac}"
