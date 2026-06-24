@@ -107,13 +107,15 @@ script:
     mode: single                          # don't stack up concurrent pushes
     then:
       - lambda: |-
-          auto state = id(ee05_state).state;
-          ESP_LOGD("ee05", "Pushing state: %s", state.c_str());
+          ESP_LOGD("ee05", "Pushing state: %s",
+                   id(ee05_state).current_option().c_str());
       - ble_client.ble_write:
           id: ee05_display
           service_uuid:        4fafc201-1fb5-459e-8fcc-c5c9c331914b
           characteristic_uuid: beb5483e-36e1-4688-b7f5-ea07361b26a8
-          value: !lambda 'return id(ee05_state).state;'
+          value: !lambda |-
+            auto opt = id(ee05_state).current_option();
+            return std::vector<uint8_t>(opt.begin(), opt.end());
 
 # ── Recurring sync — catches EE05 when it wakes from deep sleep ─────────────
 interval:
