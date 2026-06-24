@@ -19,26 +19,35 @@ substitutions:
 esphome:
   name: "${device_name}"
   friendly_name: "${friendly}"
+  min_version: 2025.11.0
+  name_add_mac_suffix: true
 
 esp32:
   board:   esp32-poe-iso
   variant: esp32
   framework:
-    type: arduino
+    type: esp-idf
+
+api:
+logger:
+
+button:
+  - platform: factory_reset
+    id: factory_reset_btn
+    name: Factory reset
 
 # ── Ethernet ─────────────────────────────────────────────────────────────────
 ethernet:
   type: LAN8720
   mdc_pin:    GPIO23
   mdio_pin:   GPIO18
-  clk_mode:   GPIO17_OUT       # Olimex ESP32-POE-ISO provides 50 MHz on GPIO17
+  clk:   
+    pin: GPIO17 # Olimex ESP32-POE-ISO provides 50 MHz on GPIO17
+    mode: CLK_OUT
   phy_addr:   0
-  power_pin:  GPIO12           # LAN8720 power; omit if board handles this
-
-# ── No WiFi ───────────────────────────────────────────────────────────────────
-wifi:       # required by ESPHome but unused — we use ethernet only
-  ssid:     "unused"
-  password: "unused"
+  power_pin:  
+    number: GPIO12           # LAN8720 power; omit if board handles this
+    ignore_strapping_warning: true
 
 # ── IP address exposed to Home Assistant ──────────────────────────────────────
 text_sensor:
@@ -53,11 +62,16 @@ text_sensor:
 #   This coexists with the EE05 ble_client below — same radio, shared duty cycle.
 bluetooth_proxy:
   active: true
+  connection_slots: 4
+
+esp32_ble:
+  max_connections: 4
 
 esp32_ble_tracker:
   scan_parameters:
-    interval: 3200    # scan aggressively (every ~2 s) to catch EE05 wakes
-    window:   2100
+    interval: 2s # scan aggressively (every ~2 s) to catch EE05 wakes
+    window:  2s 
+    active: true
 
 ble_client:
   - mac_address:   "${ee05_mac}"
@@ -113,6 +127,6 @@ interval:
       - if:
           condition:
             not:
-              lambda: 'return id(ee05_display).is_connected();'
+              lambda: 'return id(ee05_display).connected();'
           then:
             - logger.log: "EE05 has not connected recently; continuing to scan"
