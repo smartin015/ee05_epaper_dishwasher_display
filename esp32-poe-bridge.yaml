@@ -67,10 +67,10 @@ text_sensor:
 #   This coexists with the EE05 ble_client below — same radio, shared duty cycle.
 bluetooth_proxy:
   active: true
-  connection_slots: 4
+  connection_slots: 5
 
 esp32_ble:
-  max_connections: 4
+  max_connections: 5
 
 esp32_ble_tracker:
   scan_parameters:
