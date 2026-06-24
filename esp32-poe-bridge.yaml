@@ -1,0 +1,112 @@
+# -----------------------------------------------------------------------------
+# ESPHome BLE Bridge for EE05 4-Color ePaper Status Display
+# -----------------------------------------------------------------------------
+# Target board:  ESP32-POE-ISO  (Olimex / LAN8720 Ethernet)
+# Role:          BLE client that pushes state to the EE05 over BLE
+# Network:       Wired Ethernet (PoE powered — no WiFi)
+# -----------------------------------------------------------------------------
+# Adjust the ethernet block if using a different ESP32-POE board:
+#   LilyGO T-Internet-POE:  change clk_mode, power pin
+#   WT32-ETH01:             change all pin assignments
+#   wESP32:                 change clk_mode to GPIO0_OUT
+# -----------------------------------------------------------------------------
+
+substitutions:
+  device_name:  "ee05-bridge"
+  friendly:     "EE05 Bridge"
+  ee05_mac:     "AA:BB:CC:DD:EE:FF"    # ← set to your EE05's BLE MAC
+
+esphome:
+  name: "${device_name}"
+  friendly_name: "${friendly}"
+
+esp32:
+  board:   esp32-poe-iso
+  variant: esp32
+  framework:
+    type: arduino
+
+# ── Ethernet ─────────────────────────────────────────────────────────────────
+ethernet:
+  type: LAN8720
+  mdc_pin:    GPIO23
+  mdio_pin:   GPIO18
+  clk_mode:   GPIO17_OUT       # Olimex ESP32-POE-ISO provides 50 MHz on GPIO17
+  phy_addr:   0
+  power_pin:  GPIO12           # LAN8720 power; omit if board handles this
+
+# ── No WiFi ───────────────────────────────────────────────────────────────────
+wifi:       # required by ESPHome but unused — we use ethernet only
+  ssid:     "unused"
+  password: "unused"
+
+# ── IP address exposed to Home Assistant ──────────────────────────────────────
+text_sensor:
+  - platform: ethernet_info
+    ip_address:
+      name: "${friendly} IP Address"
+      icon: mdi:ip-network
+
+# ── BLE tracker + client ─────────────────────────────────────────────────────
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 3200    # scan aggressively (every ~2 s) to catch EE05 wakes
+    window:   2100
+
+ble_client:
+  - mac_address:   "${ee05_mac}"
+    id:             ee05_display
+    auto_connect:   true
+    on_connect:
+      then:
+        - logger.log: "EE05 BLE connected"
+        # Push current state as soon as we connect
+        - script.execute: ee05_push_state
+    on_disconnect:
+      then:
+        - logger.log: "EE05 BLE disconnected"
+
+# ── Display state selector ────────────────────────────────────────────────────
+select:
+  - platform: template
+    name:       "${friendly} Display State"
+    id:         ee05_state
+    optimistic: true                      # reflects change instantly in HA UI
+    restore_value: true                   # survives reboot
+    options:
+      - "clean"
+      - "dirty"
+      - "running"
+    initial_option: "clean"
+    set_action:
+      - script.execute: ee05_push_state
+
+# ── Push state script ─────────────────────────────────────────────────────────
+script:
+  - id: ee05_push_state
+    mode: single                          # don't stack up concurrent pushes
+    then:
+      - lambda: |-
+          auto state = id(ee05_state).state;
+          ESP_LOGD("ee05", "Pushing state: %s", state.c_str());
+      - ble_client.ble_write:
+          id: ee05_display
+          service_uuid:        4fafc201-1fb5-459e-8fcc-c5c9c331914b
+          characteristic_uuid: beb5483e-36e1-4688-b7f5-ea07361b26a8
+          value: !lambda 'return id(ee05_state).state;'
+
+# ── Recurring sync — catches EE05 when it wakes from deep sleep ─────────────
+interval:
+  - interval: 20s
+    then:
+      - script.execute: ee05_push_state
+
+# ── Heartbeat — log when EE05 stays disconnected ─────────────────────────────
+  - interval: 300s
+    then:
+      - if:
+          condition:
+            not:
+              lambda: 'return id(ee05_display).is_connected();'
+          then:
+            - logger.log: "EE05 has not connected recently; continuing to scan"
