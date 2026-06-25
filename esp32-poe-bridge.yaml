@@ -78,23 +78,15 @@ esp32_ble_tracker:
     window:  2s 
     active: true
   on_ble_advertise:
-    # ── Catch-all: log any Seeed device (MAC starts with E0:72:A1) ──
+    # Match EE05 by MAC and connect.  Both conditions are in a single
+    # lambda because the 'mac_address' filter syntax varies across ESPHome
+    # versions.
     - lambda: |-
-        auto m = x.mac_address();
-        if (m.size() >= 17 &&
-            m[0] == 'E' && m[1] == '0' &&
-            m[3] == '7' && m[4] == '2' &&
-            m[6] == 'A' && m[7] == '1') {
-          ESP_LOGI("ble_scan", "Seeed device: %s [%s] RSSI=%d",
-                   x.get_name().c_str(), m.c_str(), x.get_rssi());
+        if (x.address_str() == "${ee05_mac}") {
+          ESP_LOGI("ee05", "EE05 seen — connecting...");
+          if (!id(ee05_display).connected())
+            id(ee05_display).connect();
         }
-    # ── Match EE05 by MAC ──
-    - mac_address: "${ee05_mac}"
-      then:
-        - logger.log: "EE05 seen by MAC — connecting..."
-        - lambda: |-
-            if (!id(ee05_display).connected())
-              id(ee05_display).connect();
 
 ble_client:
   - mac_address:   "${ee05_mac}"
