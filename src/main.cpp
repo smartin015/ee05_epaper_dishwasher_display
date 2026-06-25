@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 // Power management — deep sleep
 // ---------------------------------------------------------------------------
-#define DEEP_SLEEP_SEC      60      // Wake interval when state is stable
+#define DEEP_SLEEP_SEC      300      // Wake interval when state is stable
 #define BLE_LISTEN_MS       15000   // How long to advertise/listen for BLE writes
 #define DEBUG_STAY_MS       60000   // Stay awake after button press (for debug)
 
@@ -127,25 +127,27 @@ static void drawState(DisplayState state) {
     int32_t h = epaper.height();
 
     epaper.fillScreen(TFT_WHITE);
-    epaper.fillRect(0, 0, w, 10, color);
-    epaper.fillRect(w - 8, 10, 8, h - 10, color);
 
     // Font 4 doesn't respect rotation (renders bottom-to-top in landscape),
     // so we use Font 2 scaled up, which renders correctly.
-    epaper.setTextColor(color, TFT_WHITE);
+    epaper.setTextColor(TFT_BLACK, TFT_WHITE);
     epaper.setTextFont(2);
     epaper.setTextSize(2);              // 16 px × 2 = 32 px
     epaper.setTextDatum(MC_DATUM);
     epaper.setTextPadding(w);
     epaper.drawString(text, w / 2, h / 2 - 8);
 
-    epaper.fillCircle(w / 2, h - 26, 9, color);
-    epaper.fillCircle(w / 2, h - 26, 5, TFT_WHITE);
+    epaper.fillCircle(w / 2 - 4, h - 42, 10, color);
+    epaper.fillCircle(w / 2 - 4, h - 42, 5, TFT_WHITE);
 
     epaper.setTextFont(2);
-    epaper.setTextColor(TFT_BLACK, TFT_WHITE);
+    epaper.setTextSize(1);
+    epaper.setTextColor(color);
     epaper.setTextDatum(BC_DATUM);
-    epaper.drawString("EE05  ·  BLE", w / 2, h - 4);
+    epaper.drawString("EE05 BLE", w / 2, h - 4);
+
+    epaper.fillRect(0, 0, w, 10, color);
+    epaper.fillRect(w - 8, 10, 8, h - 10, color);
 
     Serial.printf("Drawing '%s' ...\n", text);
     epaper.update();
@@ -237,8 +239,8 @@ void setup() {
     Serial.printf("Display: %d x %d\n", epaper.width(), epaper.height());
 
     if (isColdBoot) {
-        drawState(STATE_CLEAN);
-        rtcState = STATE_CLEAN;
+        drawState(STATE_UNKNOWN);
+        rtcState = STATE_UNKNOWN;
         Serial.printf("Battery: %.2f V\n", readBattery());
     }
 #else
