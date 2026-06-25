@@ -110,6 +110,11 @@ static void bleInit() {
 }
 
 // ---------------------------------------------------------------------------
+// Forward declarations
+// ---------------------------------------------------------------------------
+static int  readBatteryPercent();
+
+// ---------------------------------------------------------------------------
 // Draw one of the three status screens
 // ---------------------------------------------------------------------------
 static void drawState(DisplayState state) {
@@ -149,13 +154,23 @@ static void drawState(DisplayState state) {
     epaper.fillRect(0, 0, w, 10, color);
     epaper.fillRect(w - 8, 10, 8, h - 10, color);
 
-    Serial.printf("Drawing '%s' ...\n", text);
+    // --- battery percentage (top-left) -----------------------------------
+    int battPct = readBatteryPercent();
+    char battStr[8];
+    snprintf(battStr, sizeof(battStr), "%d%%", battPct);
+    epaper.setTextFont(2);
+    epaper.setTextSize(1);
+    epaper.setTextColor(TFT_BLACK, TFT_WHITE);
+    epaper.setTextDatum(TL_DATUM);
+    epaper.drawString(battStr, 4, 14);
+
+    Serial.printf("Drawing '%s' (battery %d%%) ...\n", text, battPct);
     epaper.update();
     Serial.println("  display updated.");
 }
 
 // ---------------------------------------------------------------------------
-// Read battery voltage
+// Read battery voltage / percentage
 // ---------------------------------------------------------------------------
 static float readBattery() {
     int sum = 0;
@@ -168,6 +183,15 @@ static float readBattery() {
     }
     digitalWrite(ADC_EN, LOW);
     return (sum / 10.0f / 4095.0f) * 3.3f * VOLTAGE_DIVIDER_RATIO;
+}
+
+static int readBatteryPercent() {
+    float v = readBattery();
+    // LiPo: 4.2 V = 100 %, 3.3 V = 0 %
+    int pct = (int)((v - 3.3f) / (4.2f - 3.3f) * 100.0f);
+    if (pct > 100) pct = 100;
+    if (pct < 0)   pct = 0;
+    return pct;
 }
 
 // ---------------------------------------------------------------------------
