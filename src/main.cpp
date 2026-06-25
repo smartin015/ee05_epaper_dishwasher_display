@@ -5,8 +5,6 @@
 #include <BLEServer.h>
 #include "esp_sleep.h"
 #include "driver/rtc_io.h"
-#include "esp_mac.h"           // esp_base_mac_addr_set
-#include "nvs_flash.h"
 
 // ---------------------------------------------------------------------------
 // BLE UUIDs — ESPHome ble_client writes to this characteristic
@@ -87,13 +85,6 @@ class StateCallback : public BLECharacteristicCallbacks {
 static void bleInit() {
     if (bleInitialised) return;
 
-    // Force the public (factory) MAC so the address is stable across
-    // deep-sleep reboots.  Without this, the BLE stack may use a random
-    // address that changes every wake — breaking ble_client auto_connect.
-    uint8_t mac[6];
-    esp_efuse_mac_get_default(mac);
-    esp_base_mac_addr_set(mac);
-
     BLEDevice::init("EE05-Status");
     BLEServer *pServer = BLEDevice::createServer();
 
@@ -113,13 +104,9 @@ static void bleInit() {
     BLEDevice::startAdvertising();
 
     bleInitialised = true;
-
-    // Print both the base MAC we set AND the BLE stack's actual address.
-    // They can differ — the BLE address is what the bridge sees on air.
     Serial.printf("BLE advertising as 'EE05-Status'\n");
-    Serial.printf("  Base MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    Serial.printf("  BLE addr: %s\n", BLEDevice::getAddress().toString().c_str());
+    Serial.printf("  BLE address: %s  ← use this in the bridge YAML\n",
+                  BLEDevice::getAddress().toString().c_str());
 }
 
 // ---------------------------------------------------------------------------
