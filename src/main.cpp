@@ -130,8 +130,11 @@ static void drawState(DisplayState state) {
     epaper.fillRect(0, 0, w, 10, color);
     epaper.fillRect(w - 8, 10, 8, h - 10, color);
 
+    // Font 4 doesn't respect rotation (renders bottom-to-top in landscape),
+    // so we use Font 2 scaled up, which renders correctly.
     epaper.setTextColor(color, TFT_WHITE);
-    epaper.setTextFont(4);
+    epaper.setTextFont(2);
+    epaper.setTextSize(2);              // 16 px × 2 = 32 px
     epaper.setTextDatum(MC_DATUM);
     epaper.setTextPadding(w);
     epaper.drawString(text, w / 2, h / 2 - 8);
@@ -230,7 +233,7 @@ void setup() {
     // ---- cold boot: initialise display, draw default state ----------------
 #ifdef EPAPER_ENABLE
     epaper.begin();
-    epaper.setRotation(1);
+    epaper.setRotation(1);  // landscape: 296 × 128
     Serial.printf("Display: %d x %d\n", epaper.width(), epaper.height());
 
     if (isColdBoot) {
@@ -299,7 +302,7 @@ void setup() {
                 // Display init may already be done; begin() is idempotent
                 if (!isColdBoot) {
                     epaper.begin();
-                    epaper.setRotation(1);
+                    epaper.setRotation(1);  // landscape
                 }
                 drawState(rtcState);
 #endif
