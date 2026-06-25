@@ -151,9 +151,6 @@ static void drawState(DisplayState state) {
     epaper.setTextDatum(BC_DATUM);
     epaper.drawString("EE05 BLE", w / 2, h - 4);
 
-    epaper.fillRect(0, 0, w, 10, color);
-    epaper.fillRect(w - 8, 10, 8, h - 10, color);
-
     // --- battery percentage (top-left) -----------------------------------
     int battPct = readBatteryPercent();
     char battStr[8];
@@ -165,6 +162,11 @@ static void drawState(DisplayState state) {
     epaper.drawString(battStr, 4, 14);
 
     Serial.printf("Drawing '%s' (battery %d%%) ...\n", text, battPct);
+
+
+    epaper.fillRect(0, 0, w, 10, color);
+    epaper.fillRect(w - 8, 10, 8, h - 10, color);
+
     epaper.update();
     Serial.println("  display updated.");
 }
