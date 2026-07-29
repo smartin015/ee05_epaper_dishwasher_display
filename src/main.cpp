@@ -29,15 +29,17 @@
 #define BATTERY_ADC  A0
 #define ADC_EN       6
 #define VOLTAGE_DIVIDER_RATIO  2.0f
+#define LOW_BAT_PCT_THRESH 1
 
 // ---------------------------------------------------------------------------
 // Display state
 // ---------------------------------------------------------------------------
 enum DisplayState {
+    STATE_UNKNOWN,
     STATE_CLEAN,
     STATE_DIRTY,
     STATE_RUNNING,
-    STATE_UNKNOWN
+    STATE_LOWBAT
 };
 
 // ---- RTC memory: survives deep sleep --------------------------------------
@@ -120,44 +122,70 @@ static int  readBatteryPercent();
 static void drawState(DisplayState state) {
     const char *text;
     uint32_t    color;
+    uint32_t    bgcolor;
+    uint32_t    txtcolor;
 
     switch (state) {
-    case STATE_DIRTY:   text = "DIRTY";   color = TFT_RED;    break;
-    case STATE_CLEAN:   text = "CLEAN";   color = TFT_BLACK;  break;
-    case STATE_RUNNING: text = "RUNNING"; color = TFT_YELLOW; break;
-    default:            text = "...";      color = TFT_BLACK;  break;
+    case STATE_DIRTY:   
+      text = "DIRTY";   
+      bgcolor=TFT_WHITE;  
+      color = TFT_YELLOW;  
+      txtcolor = TFT_BLACK;
+      break;
+    case STATE_CLEAN:   
+      text = "CLEAN";   
+      bgcolor=TFT_YELLOW; 
+      color = TFT_RED;    
+      txtcolor = TFT_BLACK;
+      break;
+    case STATE_RUNNING: 
+      text = "RUNNING"; 
+      bgcolor=TFT_RED;    
+      color = TFT_YELLOW;   
+      txtcolor = TFT_WHITE;
+      break;
+    case STATE_LOWBAT:  
+      text = "ENOBAT";  
+      bgcolor=TFT_RED; 
+      color = TFT_WHITE;     
+      txtcolor = TFT_BLACK;
+      break;
+    default:         
+      text = "...";   
+      bgcolor=TFT_RED; 
+      color = TFT_BLACK; 
+      txtcolor = TFT_WHITE;
+      break;
     }
 
     int32_t w = epaper.width();
     int32_t h = epaper.height();
 
-    epaper.fillScreen(TFT_WHITE);
+    epaper.setRotation(1);  // landscape: 296 × 128
+    epaper.fillRect(0, 0, w, h, bgcolor); // fillScreen should work, but doesn't
 
     // Font 4 doesn't respect rotation (renders bottom-to-top in landscape),
     // so we use Font 2 scaled up, which renders correctly.
-    epaper.setTextColor(TFT_BLACK, TFT_WHITE);
-    epaper.setTextFont(2);
-    epaper.setTextSize(2);              // 16 px × 2 = 32 px
+    epaper.setTextColor(txtcolor, bgcolor);
+    epaper.setTextFont(1);
+    epaper.setTextSize(6);
     epaper.setTextDatum(MC_DATUM);
     epaper.setTextPadding(w);
-    epaper.drawString(text, w / 2, h / 2 - 8);
-
-    epaper.fillCircle(w / 2 - 4, h - 42, 10, color);
-    epaper.fillCircle(w / 2 - 4, h - 42, 5, TFT_WHITE);
+    epaper.drawString(text, w / 2, h / 2);
 
     epaper.setTextFont(2);
     epaper.setTextSize(1);
-    epaper.setTextColor(color);
+    epaper.setTextColor(txtcolor, bgcolor);
     epaper.setTextDatum(BC_DATUM);
     epaper.drawString("EE05 BLE", w / 2, h - 4);
 
     // --- battery percentage (top-left) -----------------------------------
     int battPct = readBatteryPercent();
     char battStr[8];
-    snprintf(battStr, sizeof(battStr), "%d%%", battPct);
+    snprintf(battStr, sizeof(battStr), "BAT %d%%", battPct);
     epaper.setTextFont(2);
     epaper.setTextSize(1);
-    epaper.setTextColor(TFT_BLACK, TFT_WHITE);
+    epaper.setTextColor(txtcolor, bgcolor);
     epaper.setTextDatum(TL_DATUM);
     epaper.drawString(battStr, 4, 14);
 
@@ -237,6 +265,11 @@ static void enterDeepSleep(uint64_t sleepSec, bool buttonWake) {
 // Setup — runs on cold boot AND after every deep-sleep wake
 // ---------------------------------------------------------------------------
 void setup() {
+    // CPU defaults to 240MHz, Xtal 40MHz, APB 80MHz
+    // We set to 40MHz here for power saving reasons
+    // 10MHz had guru meditation panic issues
+    // setCpuFrequencyMhz(40);
+
     Serial.begin(115200);
     delay(300);
 
@@ -312,6 +345,14 @@ void setup() {
             delay(100);
         }
         enterDeepSleep(DEEP_SLEEP_SEC, true);
+    }
+
+    // ---- timer wake (or cold boot): Check battery ------------------------
+    int battPct = readBatteryPercent();
+    if (battPct < LOW_BAT_PCT_THRESH && rtcState != STATE_LOWBAT) {
+      rtcState = STATE_LOWBAT;
+      rtcStateChanges++;
+      drawState(rtcState);
     }
 
     // ---- timer wake (or cold boot): BLE listen window ---------------------
