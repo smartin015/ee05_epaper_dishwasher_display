@@ -266,9 +266,10 @@ static void enterDeepSleep(uint64_t sleepSec, bool buttonWake) {
 // ---------------------------------------------------------------------------
 void setup() {
     // CPU defaults to 240MHz, Xtal 40MHz, APB 80MHz
-    // We set to 40MHz here for power saving reasons
-    // 10MHz had guru meditation panic issues
-    // setCpuFrequencyMhz(40);
+    // We set to 80MHz here for power saving reasons
+    // Can't go lower as deep sleep entry requires inter-core sync
+    // and the ipc0 task queue can't drain fast enough.
+    setCpuFrequencyMhz(80);
 
     Serial.begin(115200);
     delay(300);
